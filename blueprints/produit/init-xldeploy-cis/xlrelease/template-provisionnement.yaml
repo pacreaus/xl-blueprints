@@ -1,0 +1,1076 @@
+---
+apiVersion: xl-release/v1
+kind: Templates
+metadata:
+spec:
+- directory: Projets
+  children:
+  - directory: !value blocPOS
+    children:
+    - directory: !value nomProduit
+      children:
+      - template: template_provisionnement_infra_as_code
+        description: Template pour réaliser des créations / mises à jour d'infrastructure
+          (version pilote)
+        scheduledStartDate: 2020-03-31T09:00:00+02:00
+        dueDate: 2020-06-05T10:27:42.568+02:00
+        phases:
+        - phase: Pré-requis Release
+          tasks:
+          - name: Controles deployabilité
+            type: xlrelease.ParallelGroup
+            tasks:
+            - name: Deployabilité TIC
+              type: xldeploy.TestDeploy
+              server: XLDeploy
+              deploymentPackage: ${xld.provisioningPackage}
+              deploymentEnvironment: ${xld.environnement.tic}
+              failOnMissingPlaceholder: true
+              notDeployableRulesPrefix:
+              - smoketest
+              - garmr
+              precondition: '"${xld.environnement.tic}"!=""'
+            - name: Deployabilité TIS
+              type: xldeploy.TestDeploy
+              server: XLDeploy
+              deploymentPackage: ${xld.provisioningPackage}
+              deploymentEnvironment: ${xld.environnement.tis}
+              failOnMissingPlaceholder: true
+              notDeployableRulesPrefix:
+              - smoketest
+              - garmr
+              precondition: '"${xld.environnement.tis}"!=""'
+            - name: Deployabilité VA
+              type: xldeploy.TestDeploy
+              server: XLDeploy
+              deploymentPackage: ${xld.provisioningPackage}
+              deploymentEnvironment: ${xld.environnement.va}
+              failOnMissingPlaceholder: true
+              notDeployableRulesPrefix:
+              - smoketest
+              - garmr
+              precondition: '"${xld.environnement.va}"!=""'
+            - name: Deployabilité VA-CPP
+              type: xldeploy.TestDeploy
+              server: XLDeploy
+              deploymentPackage: ${xld.provisioningPackage}
+              deploymentEnvironment: ${xld.environnement.vacpp}
+              failOnMissingPlaceholder: true
+              notDeployableRulesPrefix:
+              - smoketest
+              - garmr
+              precondition: '"${xld.environnement.vacpp}"!=""'
+            - name: Deployabilité BENCH
+              type: xldeploy.TestDeploy
+              server: XLDeploy
+              deploymentPackage: ${xld.provisioningPackage}
+              deploymentEnvironment: ${xld.environnement.vacpp}
+              failOnMissingPlaceholder: true
+              notDeployableRulesPrefix:
+              - smoketest
+              - garmr
+              precondition: '"${xld.environnement.bench}"!=""'
+            - name: Deployabilité APPRO
+              type: xldeploy.TestDeploy
+              server: XLDeploy
+              deploymentPackage: ${xld.provisioningPackage}
+              deploymentEnvironment: ${xld.environnement.appro}
+              failOnMissingPlaceholder: true
+              notDeployableRulesPrefix:
+              - smoketest
+              - garmr
+              precondition: '"${xld.environnement.appro}"!=""'
+            - name: Deployabilité PMS
+              type: xldeploy.TestDeploy
+              server: XLDeploy
+              deploymentPackage: ${xld.provisioningPackage_prod}
+              deploymentEnvironment: ${xld.environnement.pms}
+              failOnMissingPlaceholder: true
+              notDeployableRulesPrefix:
+              - smoketest
+              - garmr
+              precondition: '"${xld.environnement.pms}"!=""'
+            - name: Deployabilité PROD
+              type: xldeploy.TestDeploy
+              server: XLDeploy
+              deploymentPackage: ${xld.provisioningPackage_prod}
+              deploymentEnvironment: ${xld.environnement.prod}
+              failOnMissingPlaceholder: true
+              notDeployableRulesPrefix:
+              - smoketest
+              - garmr
+          - name: Configuration Appel API CLE
+            type: xlrelease.SequentialGroup
+            tasks:
+            - name: Renseignement Paramètres
+              type: xlrelease.UserInputTask
+              description: Please enter the required information below.
+              team: Release Admin
+              variables:
+              - vip.codeComposant
+              - vip.description.url
+              - vip.lettresCadre
+            - name: Initialisation Paramètres VIP
+              type: xlrelease.ScriptTask
+              script: "import urllib2\r\nimport json\r\nrequest = urllib2.Request(\"\
+                $_{vip.description.url}\")\r\nrequest = urllib2.Request(\"${vip.description.url}\"\
+                )\r\nrequest.add_header('Content-Type', 'application/json')\r\nvipConfiguration=urllib2.urlopen(request).read()\r\
+                \nreleaseVariables[\"vip.configuration\"]=vipConfiguration\r\n\r\n\
+                def getResourcePath(groupeCadre):\r\n    if groupeCadre in ${vip.lettresCadre}\
+                \ :\r\n        lettreCadre=${vip.lettresCadre}[groupeCadre]\r\n  \
+                \      return \"api/cle/v1/composite/vip/${vip.codeComposant}/\"+groupeCadre+\"\
+                /\"+lettreCadre\r\n    else:\r\n        return None\r\n\r\nreleaseVariables[\"\
+                vip.ressource.tic\"]=getResourcePath('tic')\r\nreleaseVariables[\"\
+                vip.ressource.tis\"]=getResourcePath('tis')\r\nreleaseVariables[\"\
+                vip.ressource.va\"]=getResourcePath('va')\r\nreleaseVariables[\"vip.ressource.vacpp\"\
+                ]=getResourcePath('vacpp')\r\nreleaseVariables[\"vip.ressource.bench\"\
+                ]=getResourcePath('bench')\r\nreleaseVariables[\"vip.ressource.appro\"\
+                ]=getResourcePath('appro')\r\nreleaseVariables[\"vip.ressource.pms\"\
+                ]=getResourcePath('pms')\r\nreleaseVariables[\"vip.ressource.prod\"\
+                ]=getResourcePath('prod')"
+            - name: controle valorisation VIP
+              type: xlrelease.GateTask
+              description: |-
+                ### Merci de verifier les paramètres de configuration des VIP suivants:
+                configuration:
+                ``` json
+                ${vip.configuration}
+                ```
+                | groupe Cadre | ressource VIP |
+                |-|-|
+                | TIC | ${vip.ressource.tic} |
+                | TIS | ${vip.ressource.tis} |
+                | VA | ${vip.ressource.va} |
+                | VA-CPP | ${vip.ressource.vacpp} |
+                | BENCH | ${vip.ressource.bench} |
+                | APPRO | ${vip.ressource.appro} |
+                | PMS | ${vip.ressource.pms} |
+                | PROD | ${vip.ressource.prod} |
+              team: Release Admin
+          color: '#0099CC'
+        - phase: Environnements d'intégration
+          tasks:
+          - name: Approvisionnement TIC
+            type: xlrelease.SequentialGroup
+            description: Approvisionnement de ${xld.environnement.tic}
+            precondition: '"${xld.environnement.tic}"!=""'
+            tasks:
+            - name: Validation provisionnement TIC
+              type: xlrelease.GateTask
+              description: |-
+                ### Validation Ordre de provisionnement d'infrastructure
+                - pakage de provisionnement:  ${xld.provisioningPackage}
+
+                - environnement Cible : ${xld.environnement.tic}
+
+                provisionnement VIP:
+                - resource API Cle: ${vip.ressource.tic}
+                ```javascript
+                ${vip.configuration}
+                ```
+              team: Release Admin
+            - name: Deploiment des Infrastructures
+              type: xlrelease.ParallelGroup
+              tasks:
+              - name: Gestion de l'infrastructure via XL Deploy
+                type: xldeploy.Deploy
+                server: XLDeploy
+                deploymentPackage: ${xld.provisioningPackage}
+                deploymentEnvironment: ${xld.environnement.tic}
+              - name: Création VIP Auto TIC
+                type: xlrelease.SequentialGroup
+                tasks:
+                - name: Demande Configuration VIP TIC ${vip.ressource.tic}
+                  type: sddcApi.request
+                  server: API Cle Fab (SDDC Prod)
+                  resource: ${vip.ressource.tic}
+                  method: POST
+                  body: ${vip.configuration}
+                  extractExpression: id
+                  description: |-
+                    provisionnement VIP:
+                    - resource API Cle: ${vip.ressource.tic}
+                    ```javascript
+                    ${vip.configuration}
+                    ```
+                  variableMapping:
+                    pythonScript.response: ${apiCle.idDemande.tic}
+                - name: Attente ApiCle Demande VIP TIC ${apiCle.idDemande.tic}
+                  type: sddcApi.pollRequest
+                  server: API Cle Fab (SDDC Prod)
+                  resource: /api/cle/v1/demande/${apiCle.idDemande.tic}
+                  method: GET
+                  nbRetry: 120
+                  statusExpression: etat
+                  waitStatus:
+                  - EN ATTENTE
+                  - EN COURS
+                  okStatus:
+                  - SUCCES
+                  failStatus:
+                  - ERREUR
+            - name: Mise à jour VIP Auto TIC
+              type: xlrelease.SequentialGroup
+              tasks:
+              - name: Demande Configuration VIP TIC ${vip.ressource.tic}
+                type: sddcApi.request
+                server: API Cle Fab (SDDC Prod)
+                resource: ${vip.ressource.tic}
+                method: POST
+                body: ${vip.configuration}
+                extractExpression: id
+                description: |-
+                  provisionnement VIP:
+                  - resource API Cle: ${vip.ressource.tic}
+                  ```javascript
+                  ${vip.configuration}
+                  ```
+                variableMapping:
+                  pythonScript.response: ${apiCle.idDemande.tic}
+              - name: Attente ApiCle Demande VIP TIC ${apiCle.idDemande.tic}
+                type: sddcApi.pollRequest
+                server: API Cle Fab (SDDC Prod)
+                resource: /api/cle/v1/demande/${apiCle.idDemande.tic}
+                method: GET
+                nbRetry: 120
+                statusExpression: etat
+                waitStatus:
+                - EN ATTENTE
+                - EN COURS
+                okStatus:
+                - SUCCES
+                failStatus:
+                - ERREUR
+          - name: Approvisionnement TIS
+            type: xlrelease.SequentialGroup
+            description: Approvisionnement de ${xld.environnement.tis}
+            precondition: '"${xld.environnement.tis}"!=""'
+            tasks:
+            - name: Validation provisionnement TIS
+              type: xlrelease.GateTask
+              description: |-
+                ### Validation Ordre de provisionnement d'infrastructure
+                - pakage de provisionnement:  ${xld.provisioningPackage}
+
+                - environnement Cible : ${xld.environnement.tis}
+
+                provisionnement VIP:
+                - resource API Cle: ${vip.ressource.tis}
+                ```javascript
+                ${vip.configuration}
+                ```
+              team: Release Admin
+            - name: Deploiment des Infrastructures
+              type: xlrelease.ParallelGroup
+              tasks:
+              - name: Gestion de l'infrastructure via XL Deploy
+                type: xldeploy.Deploy
+                server: XLDeploy
+                deploymentPackage: ${xld.provisioningPackage}
+                deploymentEnvironment: ${xld.environnement.tis}
+              - name: Création VIP Auto TIS
+                type: xlrelease.SequentialGroup
+                tasks:
+                - name: Demande Configuration VIP TIS ${vip.ressource.tis}
+                  type: sddcApi.request
+                  server: API Cle Fab (SDDC Prod)
+                  resource: ${vip.ressource.tis}
+                  method: POST
+                  body: ${vip.configuration}
+                  extractExpression: id
+                  description: |-
+                    provisionnement VIP:
+                    - resource API Cle: ${vip.ressource.tis}
+                    ```javascript
+                    ${vip.configuration}
+                    ```
+                  variableMapping:
+                    pythonScript.response: ${apiCle.idDemande.tis}
+                - name: Attente ApiCle Demande VIP TIS ${apiCle.idDemande.tis}
+                  type: sddcApi.pollRequest
+                  server: API Cle Fab (SDDC Prod)
+                  resource: /api/cle/v1/demande/${apiCle.idDemande.tis}
+                  method: GET
+                  nbRetry: 120
+                  statusExpression: etat
+                  waitStatus:
+                  - EN ATTENTE
+                  - EN COURS
+                  okStatus:
+                  - SUCCES
+                  failStatus:
+                  - ERREUR
+            - name: Mise A Jour VIP Auto TIS
+              type: xlrelease.SequentialGroup
+              tasks:
+              - name: Demande Configuration VIP TIS ${vip.ressource.tis}
+                type: sddcApi.request
+                server: API Cle Fab (SDDC Prod)
+                resource: ${vip.ressource.tis}
+                method: POST
+                body: ${vip.configuration}
+                extractExpression: id
+                description: |-
+                  provisionnement VIP:
+                  - resource API Cle: ${vip.ressource.tis}
+                  ```javascript
+                  ${vip.configuration}
+                  ```
+                variableMapping:
+                  pythonScript.response: ${apiCle.idDemande.tis}
+              - name: Attente ApiCle Demande VIP TIS ${apiCle.idDemande.tis}
+                type: sddcApi.pollRequest
+                server: API Cle Fab (SDDC Prod)
+                resource: /api/cle/v1/demande/${apiCle.idDemande.tis}
+                method: GET
+                nbRetry: 120
+                statusExpression: etat
+                waitStatus:
+                - EN ATTENTE
+                - EN COURS
+                okStatus:
+                - SUCCES
+                failStatus:
+                - ERREUR
+          color: '#0099CC'
+        - phase: Environnements de qualification
+          tasks:
+          - name: Approvisionnement VA  ${xld.environnement.va}
+            type: xlrelease.SequentialGroup
+            description: provisionnement de ${xld.environnement.va}
+            precondition: '"${xld.environnement.va}"!=""'
+            tasks:
+            - name: Validation provisionnement VA
+              type: xlrelease.GateTask
+              description: |-
+                ### Validation Ordre de provisionnement d'infrastructure
+                - pakage de provisionnement:  ${xld.provisioningPackage}
+
+                - environnement Cible : ${xld.environnement.va}
+
+                provisionnement VIP:
+                - resource API Cle: ${vip.ressource.tic}
+                ```javascript
+                ${vip.configuration}
+                ```
+              team: Release Admin
+            - name: Deploiment des Infrastructures
+              type: xlrelease.ParallelGroup
+              tasks:
+              - name: Gestion de l'infrastructure via XL Deploy
+                type: xldeploy.Deploy
+                server: XLDeploy
+                deploymentPackage: ${xld.provisioningPackage}
+                deploymentEnvironment: ${xld.environnement.va}
+              - name: Création VIP Auto VA
+                type: xlrelease.SequentialGroup
+                tasks:
+                - name: Demande Configuration VIP ${vip.ressource.va}
+                  type: sddcApi.request
+                  server: API Cle Fab (SDDC Prod)
+                  resource: ${vip.ressource.va}
+                  method: POST
+                  body: ${vip.configuration}
+                  extractExpression: id
+                  description: |-
+                    provisionnement VIP:
+                    - resource API Cle: ${vip.ressource.va}
+                    ```javascript
+                    ${vip.configuration}
+                    ```
+                  variableMapping:
+                    pythonScript.response: ${apiCle.idDemande.va}
+                - name: Attente ApiCle Demande VIP VA ${apiCle.idDemande.va}
+                  type: sddcApi.pollRequest
+                  server: API Cle Fab (SDDC Prod)
+                  resource: /api/cle/v1/demande/${apiCle.idDemande.va}
+                  method: GET
+                  nbRetry: 120
+                  statusExpression: etat
+                  waitStatus:
+                  - EN ATTENTE
+                  - EN COURS
+                  okStatus:
+                  - SUCCES
+                  failStatus:
+                  - ERREUR
+            - name: Mise à jour VIP Auto VA
+              type: xlrelease.SequentialGroup
+              tasks:
+              - name: Demande Configuration VIP ${vip.ressource.va}
+                type: sddcApi.request
+                server: API Cle Fab (SDDC Prod)
+                resource: ${vip.ressource.va}
+                method: POST
+                body: ${vip.configuration}
+                extractExpression: id
+                description: |-
+                  provisionnement VIP:
+                  - resource API Cle: ${vip.ressource.va}
+                  ```javascript
+                  ${vip.configuration}
+                  ```
+                variableMapping:
+                  pythonScript.response: ${apiCle.idDemande.va}
+              - name: Attente ApiCle Demande VIP VA ${apiCle.idDemande.va}
+                type: sddcApi.pollRequest
+                server: API Cle Fab (SDDC Prod)
+                resource: /api/cle/v1/demande/${apiCle.idDemande.va}
+                method: GET
+                nbRetry: 120
+                statusExpression: etat
+                waitStatus:
+                - EN ATTENTE
+                - EN COURS
+                okStatus:
+                - SUCCES
+                failStatus:
+                - ERREUR
+          - name: Approvisionnement VA-CPP  ${xld.environnement.vacpp}
+            type: xlrelease.SequentialGroup
+            description: Approvisionnement de ${xld.environnement.vacpp}
+            precondition: '"${xld.environnement.vacpp}"!=""'
+            tasks:
+            - name: Validation provisionnement VA-CPP
+              type: xlrelease.GateTask
+              description: |-
+                ### Validation Ordre de provisionnement d'infrastructure
+                - pakage de provisionnement:  ${xld.provisioningPackage}
+
+                - environnement Cible : ${xld.environnement.vacpp}
+
+                provisionnement VIP:
+                - resource API Cle: ${vip.ressource.vacpp}
+                ```javascript
+                ${vip.configuration}
+                ```
+              team: Release Admin
+            - name: Deploiment des Infrastructures
+              type: xlrelease.ParallelGroup
+              tasks:
+              - name: Gestion de l'infrastructure via XL Deploy
+                type: xldeploy.Deploy
+                server: XLDeploy
+                deploymentPackage: ${xld.provisioningPackage}
+                deploymentEnvironment: ${xld.environnement.vacpp}
+              - name: Création VIP Auto VA-CPP
+                type: xlrelease.SequentialGroup
+                tasks:
+                - name: Demande Configuration VIP VA-CPP ${vip.ressource.vacpp}
+                  type: sddcApi.request
+                  server: API Cle Fab (SDDC Prod)
+                  resource: ${vip.ressource.vacpp}
+                  method: POST
+                  body: ${vip.configuration}
+                  extractExpression: id
+                  description: |-
+                    provisionnement VIP:
+                    - resource API Cle: ${vip.ressource.vacpp}
+                    ```javascript
+                    ${vip.configuration}
+                    ```
+                  variableMapping:
+                    pythonScript.response: ${apiCle.idDemande.vacpp}
+                - name: Attente ApiCle Demande VIP VA-CPP ${apiCle.idDemande.vacpp}
+                  type: sddcApi.pollRequest
+                  server: API Cle Fab (SDDC Prod)
+                  resource: /api/cle/v1/demande/${apiCle.idDemande.vacpp}
+                  method: GET
+                  nbRetry: 120
+                  statusExpression: etat
+                  waitStatus:
+                  - EN ATTENTE
+                  - EN COURS
+                  okStatus:
+                  - SUCCES
+                  failStatus:
+                  - ERREUR
+            - name: Mise à jour VIP Auto VA-CPP
+              type: xlrelease.SequentialGroup
+              tasks:
+              - name: Demande Configuration VIP VA-CPP ${vip.ressource.vacpp}
+                type: sddcApi.request
+                server: API Cle Fab (SDDC Prod)
+                resource: ${vip.ressource.vacpp}
+                method: POST
+                body: ${vip.configuration}
+                extractExpression: id
+                description: |-
+                  provisionnement VIP:
+                  - resource API Cle: ${vip.ressource.vacpp}
+                  ```javascript
+                  ${vip.configuration}
+                  ```
+                variableMapping:
+                  pythonScript.response: ${apiCle.idDemande.vacpp}
+              - name: Attente ApiCle Demande VIP VA-CPP ${apiCle.idDemande.vacpp}
+                type: sddcApi.pollRequest
+                server: API Cle Fab (SDDC Prod)
+                resource: /api/cle/v1/demande/${apiCle.idDemande.vacpp}
+                method: GET
+                nbRetry: 120
+                statusExpression: etat
+                waitStatus:
+                - EN ATTENTE
+                - EN COURS
+                okStatus:
+                - SUCCES
+                failStatus:
+                - ERREUR
+          - name: Approvisionnement BENCH ${xld.environnement.bench}
+            type: xlrelease.SequentialGroup
+            description: Approvisionnement de ${xld.environnement.bench}
+            precondition: '"${xld.environnement.bench}"!=""'
+            tasks:
+            - name: Validation provisionnement BENCH
+              type: xlrelease.GateTask
+              description: |-
+                ### Validation Ordre de provisionnement d'infrastructure
+                - pakage de provisionnement:  ${xld.provisioningPackage}
+
+                - environnement Cible : ${xld.environnement.bench}
+
+                provisionnement VIP:
+                - resource API Cle: ${vip.ressource.bench}
+                ```javascript
+                ${vip.configuration}
+                ```
+              team: Release Admin
+            - name: Deploiment des Infrastructures
+              type: xlrelease.ParallelGroup
+              tasks:
+              - name: Gestion de l'infrastructure via XL Deploy
+                type: xldeploy.Deploy
+                server: XLDeploy
+                deploymentPackage: ${xld.provisioningPackage}
+                deploymentEnvironment: ${xld.environnement.bench}
+              - name: Création VIP Auto BENCH
+                type: xlrelease.SequentialGroup
+                tasks:
+                - name: Demande Configuration VIP BENCH ${vip.ressource.bench}
+                  type: sddcApi.request
+                  server: API Cle Fab (SDDC Prod)
+                  resource: ${vip.ressource.bench}
+                  method: POST
+                  body: ${vip.configuration}
+                  extractExpression: id
+                  description: |-
+                    provisionnement VIP:
+                    - resource API Cle: ${vip.ressource.bench}
+                    ```javascript
+                    ${vip.configuration}
+                    ```
+                  variableMapping:
+                    pythonScript.response: ${apiCle.idDemande.bench}
+                - name: Attente ApiCle Demande VIP BENCH ${apiCle.idDemande.bench}
+                  type: sddcApi.pollRequest
+                  server: API Cle Fab (SDDC Prod)
+                  resource: /api/cle/v1/demande/${apiCle.idDemande.bench}
+                  method: GET
+                  nbRetry: 120
+                  statusExpression: etat
+                  waitStatus:
+                  - EN ATTENTE
+                  - EN COURS
+                  okStatus:
+                  - SUCCES
+                  failStatus:
+                  - ERREUR
+            - name: Mise à jour VIP Auto BENCH
+              type: xlrelease.SequentialGroup
+              tasks:
+              - name: Demande Configuration VIP BENCH ${vip.ressource.bench}
+                type: sddcApi.request
+                server: API Cle Fab (SDDC Prod)
+                resource: ${vip.ressource.bench}
+                method: POST
+                body: ${vip.configuration}
+                extractExpression: id
+                description: |-
+                  provisionnement VIP:
+                  - resource API Cle: ${vip.ressource.bench}
+                  ```javascript
+                  ${vip.configuration}
+                  ```
+                variableMapping:
+                  pythonScript.response: ${apiCle.idDemande.bench}
+              - name: Attente ApiCle Demande VIP BENCH ${apiCle.idDemande.bench}
+                type: sddcApi.pollRequest
+                server: API Cle Fab (SDDC Prod)
+                resource: /api/cle/v1/demande/${apiCle.idDemande.bench}
+                method: GET
+                nbRetry: 120
+                statusExpression: etat
+                waitStatus:
+                - EN ATTENTE
+                - EN COURS
+                okStatus:
+                - SUCCES
+                failStatus:
+                - ERREUR
+          - name: Approvisionnement APPRO ${xld.environnement.appro}
+            type: xlrelease.SequentialGroup
+            description: Approvisionnement de ${xld.environnement.appro}
+            precondition: '"${xld.environnement.appro}"!=""'
+            tasks:
+            - name: Validation provisionnement APPRO
+              type: xlrelease.GateTask
+              description: |-
+                ### Validation Ordre de provisionnement d'infrastructure
+                - pakage de provisionnement:  ${xld.provisioningPackage}
+
+                - environnement Cible : ${xld.environnement.appro}
+
+                provisionnement VIP:
+                - resource API Cle: ${vip.ressource.appro}
+                ```javascript
+                ${vip.configuration}
+                ```
+              team: Release Admin
+            - name: Deploiment des Infrastructures
+              type: xlrelease.ParallelGroup
+              tasks:
+              - name: Gestion de l'infrastructure via XL Deploy
+                type: xldeploy.Deploy
+                server: XLDeploy
+                deploymentPackage: ${xld.provisioningPackage}
+                deploymentEnvironment: ${xld.environnement.appro}
+              - name: Création VIP Auto APPRO
+                type: xlrelease.SequentialGroup
+                tasks:
+                - name: Demande Configuration VIP APPRO ${vip.ressource.appro}
+                  type: sddcApi.request
+                  server: API Cle Fab (SDDC Prod)
+                  resource: ${vip.ressource.appro}
+                  method: POST
+                  body: ${vip.configuration}
+                  extractExpression: id
+                  description: |-
+                    provisionnement VIP:
+                    - resource API Cle: ${vip.ressource.appro}
+                    ```javascript
+                    ${vip.configuration}
+                    ```
+                  variableMapping:
+                    pythonScript.response: ${apiCle.idDemande.appro}
+                - name: Attente ApiCle Demande VIP APPRO ${apiCle.idDemande.appro}
+                  type: sddcApi.pollRequest
+                  server: API Cle Fab (SDDC Prod)
+                  resource: /api/cle/v1/demande/${apiCle.idDemande.appro}
+                  method: GET
+                  nbRetry: 120
+                  statusExpression: etat
+                  waitStatus:
+                  - EN ATTENTE
+                  - EN COURS
+                  okStatus:
+                  - SUCCES
+                  failStatus:
+                  - ERREUR
+            - name: Mise à jour VIP Auto APPRO
+              type: xlrelease.SequentialGroup
+              tasks:
+              - name: Demande Configuration VIP APPRO ${vip.ressource.appro}
+                type: sddcApi.request
+                server: API Cle Fab (SDDC Prod)
+                resource: ${vip.ressource.appro}
+                method: POST
+                body: ${vip.configuration}
+                extractExpression: id
+                description: |-
+                  provisionnement VIP:
+                  - resource API Cle: ${vip.ressource.appro}
+                  ```javascript
+                  ${vip.configuration}
+                  ```
+                variableMapping:
+                  pythonScript.response: ${apiCle.idDemande.appro}
+              - name: Attente ApiCle Demande VIP APPRO ${apiCle.idDemande.appro}
+                type: sddcApi.pollRequest
+                server: API Cle Fab (SDDC Prod)
+                resource: /api/cle/v1/demande/${apiCle.idDemande.appro}
+                method: GET
+                nbRetry: 120
+                statusExpression: etat
+                waitStatus:
+                - EN ATTENTE
+                - EN COURS
+                okStatus:
+                - SUCCES
+                failStatus:
+                - ERREUR
+          color: '#0099CC'
+        - phase: Environnements de production
+          tasks:
+          - name: Approvisionnement PMS ${xld.environnement.pms}
+            type: xlrelease.SequentialGroup
+            description: Approvisionnement de ${xld.environnement.pms}
+            precondition: '"${xld.environnement.pms}"!=""'
+            tasks:
+            - name: Validation provisionnement PMS
+              type: xlrelease.GateTask
+              description: |-
+                ### Validation Ordre de provisionnement d'infrastructure
+                - pakage de provisionnement:  ${xld.provisioningPackage_prod}
+                - environnement Cible : ${xld.environnement.pms}
+                provisionnement VIP:
+                - resource API Cle: ${vip.ressource.pms}
+                ```javascript
+                ${vip.configuration}
+                ```
+              team: Release Admin
+            - name: Deploiment des Infrastructures
+              type: xlrelease.ParallelGroup
+              tasks:
+              - name: Gestion de l'infrastructure via XL Deploy
+                type: xldeploy.Deploy
+                server: XLDeploy
+                deploymentPackage: ${xld.provisioningPackage_prod}
+                deploymentEnvironment: ${xld.environnement.pms}
+              - name: Création VIP Auto PMS
+                type: xlrelease.SequentialGroup
+                tasks:
+                - name: Demande Configuration VIP PMS ${vip.ressource.pms}
+                  type: sddcApi.request
+                  server: API Cle Fab (SDDC Prod)
+                  resource: ${vip.ressource.pms}
+                  method: POST
+                  body: ${vip.configuration}
+                  extractExpression: id
+                  description: |-
+                    provisionnement VIP:
+                    - resource API Cle: ${vip.ressource.pms}
+                    ```javascript
+                    ${vip.configuration}
+                    ```
+                  variableMapping:
+                    pythonScript.response: ${apiCle.idDemande.pms}
+                - name: Attente ApiCle Demande VIP PMS ${apiCle.idDemande.pms}
+                  type: sddcApi.pollRequest
+                  server: API Cle Fab (SDDC Prod)
+                  resource: /api/cle/v1/demande/${apiCle.idDemande.pms}
+                  method: GET
+                  nbRetry: 120
+                  statusExpression: etat
+                  waitStatus:
+                  - EN ATTENTE
+                  - EN COURS
+                  okStatus:
+                  - SUCCES
+                  failStatus:
+                  - ERREUR
+            - name: Mise à jour VIP Auto PMS
+              type: xlrelease.SequentialGroup
+              tasks:
+              - name: Demande Configuration VIP PMS ${vip.ressource.pms}
+                type: sddcApi.request
+                server: API Cle Fab (SDDC Prod)
+                resource: ${vip.ressource.pms}
+                method: POST
+                body: ${vip.configuration}
+                extractExpression: id
+                description: |-
+                  provisionnement VIP:
+                  - resource API Cle: ${vip.ressource.pms}
+                  ```javascript
+                  ${vip.configuration}
+                  ```
+                variableMapping:
+                  pythonScript.response: ${apiCle.idDemande.pms}
+              - name: Attente ApiCle Demande VIP PMS ${apiCle.idDemande.pms}
+                type: sddcApi.pollRequest
+                server: API Cle Fab (SDDC Prod)
+                resource: /api/cle/v1/demande/${apiCle.idDemande.pms}
+                method: GET
+                nbRetry: 120
+                statusExpression: etat
+                waitStatus:
+                - EN ATTENTE
+                - EN COURS
+                okStatus:
+                - SUCCES
+                failStatus:
+                - ERREUR
+          - name: Initialisation SNOW
+            type: xlrelease.SequentialGroup
+            tasks:
+            - name: Saisie du numéro de changement SNOW
+              type: xlrelease.UserInputTask
+              description: |-
+                Veuillez renseigner le numéro du changement correspond à votre livraison.
+                N.B. : Ce numéro doit respecter l'expression régulière suivante : ^CHG[0-9]{7}$
+                (ex : CHG0051811)
+              variables:
+              - snow.number
+            - name: Vérification du changement SNOW
+              type: servicenow.FindChangeRequestByTicket
+              servicenowServer: ServiceNow PROD
+              ticket: ${snow.number}
+              variableMapping:
+                pythonScript.sysId: ${snow.sys.id}
+          - name: Approvisionnement PRODUCTION ${xld.environnement.prod}
+            type: xlrelease.SequentialGroup
+            description: Approvisionnement de ${xld.environnement.prod}
+            tasks:
+            - name: Attente du GO SNOW
+              type: servicenow.PollingCheckStatus
+              servicenowServer: ServiceNow PROD
+              sysId: ${snow.sys.id}
+              checkForStatus: En cours
+            - name: Deploiment des Infrastructures
+              type: xlrelease.ParallelGroup
+              tasks:
+              - name: Gestion de l'infrastructure via XL Deploy
+                type: xldeploy.Deploy
+                server: XLDeploy
+                deploymentPackage: ${xld.provisioningPackage_prod}
+                deploymentEnvironment: ${xld.environnement.prod}
+              - name: Création VIP Auto PROD
+                type: xlrelease.SequentialGroup
+                tasks:
+                - name: Demande Configuration VIP PROD ${vip.ressource.prod}
+                  type: sddcApi.request
+                  server: API Cle Fab (SDDC Prod)
+                  resource: ${vip.ressource.prod}
+                  method: POST
+                  body: ${vip.configuration}
+                  extractExpression: id
+                  description: |-
+                    provisionnement VIP:
+                    - resource API Cle: ${vip.ressource.prod}
+                    ```javascript
+                    ${vip.configuration}
+                    ```
+                  variableMapping:
+                    pythonScript.response: ${apiCle.idDemande.prod}
+                - name: Attente ApiCle Demande VIP PROD ${apiCle.idDemande.prod}
+                  type: sddcApi.pollRequest
+                  server: API Cle Fab (SDDC Prod)
+                  resource: /api/cle/v1/demande/${apiCle.idDemande.prod}
+                  method: GET
+                  nbRetry: 120
+                  statusExpression: etat
+                  waitStatus:
+                  - EN ATTENTE
+                  - EN COURS
+                  okStatus:
+                  - SUCCES
+                  failStatus:
+                  - ERREUR
+            - name: Mise à jour VIP Auto PROD
+              type: xlrelease.SequentialGroup
+              tasks:
+              - name: Demande Configuration VIP PROD ${vip.ressource.prod}
+                type: sddcApi.request
+                server: API Cle Fab (SDDC Prod)
+                resource: ${vip.ressource.prod}
+                method: POST
+                body: ${vip.configuration}
+                extractExpression: id
+                description: |-
+                  provisionnement VIP:
+                  - resource API Cle: ${vip.ressource.prod}
+                  ```javascript
+                  ${vip.configuration}
+                  ```
+                variableMapping:
+                  pythonScript.response: ${apiCle.idDemande.prod}
+              - name: Attente ApiCle Demande VIP PROD ${apiCle.idDemande.prod}
+                type: sddcApi.pollRequest
+                server: API Cle Fab (SDDC Prod)
+                resource: /api/cle/v1/demande/${apiCle.idDemande.prod}
+                method: GET
+                nbRetry: 120
+                statusExpression: etat
+                waitStatus:
+                - EN ATTENTE
+                - EN COURS
+                okStatus:
+                - SUCCES
+                failStatus:
+                - ERREUR
+          color: '#0099CC'
+        variables:
+        - type: xlrelease.StringVariable
+          key: xld.provisioningPackage
+          label: Package de provisionnement Infra
+          value: Communs/Provisioning/apacheSddc/1.0
+        - type: xlrelease.StringVariable
+          key: xld.provisioningPackage_prod
+          label: Package de provisionnement  infra de production
+          value: Communs/Provisioning/apacheSddc_prod/1.0
+        - type: xlrelease.StringVariable
+          key: xld.environnement.tic
+          requiresValue: false
+          label: Environnement XlDeploy TIC
+          description: environnement TIC Facultatif (mettre à vide pour skipper)
+          value: !value xldEnvironnementTIC
+        - type: xlrelease.StringVariable
+          key: xld.environnement.tis
+          requiresValue: false
+          label: Environnement XlDeploy TIS
+          description: environnement TIS Facultatif (mettre à vide pour skipper)
+          value: ${folder.xld.environnement.tis}
+        - type: xlrelease.StringVariable
+          key: xld.environnement.va
+          requiresValue: false
+          label: Environnement XlDeploy VA
+          description: environnement VA Facultatif (mettre à vide pourBench skipper)
+          value: ${folder.xld.environnement.va}
+        - type: xlrelease.StringVariable
+          key: xld.environnement.bench
+          requiresValue: false
+          label: Environnement XlDeploy Bench
+          description: environnement Bench Facultatif (mettre à vide pour skipper)
+          value: ${folder.xld.environnement.bench}
+        - type: xlrelease.StringVariable
+          key: xld.environnement.vacpp
+          requiresValue: false
+          label: Environnement XlDeploy VA-CPP
+          description: environnement VA-CPP Facultatif (mettre à vide pour skipper)
+          value: ${folder.xld.environnement.vacpp}
+        - type: xlrelease.StringVariable
+          key: xld.environnement.appro
+          requiresValue: false
+          label: Environnement XlDeploy APPRO
+          description: environnement APPRO Facultatif (mettre à vide pour skipper)
+          value: ${folder.xld.environnement.appro}
+        - type: xlrelease.StringVariable
+          key: xld.environnement.pms
+          requiresValue: false
+          label: Environnement XlDeploy PMS
+          description: environnement PMS Facultatif (mettre à vide pour skipper)
+          value: ${folder.xld.environnement.pms}
+        - type: xlrelease.StringVariable
+          key: xld.environnement.prod
+          label: Environnement XlDeploy PROD
+          value: ${folder.xld.environnement.prod}
+        - type: xlrelease.StringVariable
+          key: vip.codeComposant
+          requiresValue: false
+          showOnReleaseStart: false
+          label: composant VIP
+          description: composant porteur de la VIP
+          value: pn158
+        - type: xlrelease.StringVariable
+          key: vip.description.url
+          requiresValue: false
+          showOnReleaseStart: false
+          label: url fichier description VIP
+          description: url fichier descritpeur des paramètres VIP
+          value: http://git-scm.pole-emploi.intra/tmj/livrables/conteneurisation/nodejs-api-cle/raw/master/desc/pn158_description_sddc.json
+        - type: xlrelease.MapStringStringVariable
+          key: vip.lettresCadre
+          requiresValue: false
+          showOnReleaseStart: false
+          label: lettres de cadre
+          value:
+            vacpp: t
+            prod: p
+            pms: p
+            appro: m
+            va: r
+            bench: "n"
+            tis: b
+            tic: a
+        - type: xlrelease.StringVariable
+          key: vip.configuration
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - Json Configuration VIP (lu depuis resource Git)
+        - type: xlrelease.StringVariable
+          key: vip.ressource.tic
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - resource REST Vip TIC
+        - type: xlrelease.StringVariable
+          key: apiCle.idDemande.tic
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - id demande ApiCle TIC
+        - type: xlrelease.StringVariable
+          key: vip.ressource.tis
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - resource REST Vip TIS
+        - type: xlrelease.StringVariable
+          key: apiCle.idDemande.tis
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - id demande ApiCle TIS
+        - type: xlrelease.StringVariable
+          key: vip.ressource.va
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - resource REST Vip VA
+        - type: xlrelease.StringVariable
+          key: apiCle.idDemande.va
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - id demande ApiCle VA
+        - type: xlrelease.StringVariable
+          key: vip.ressource.bench
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - resource REST Vip Bench
+        - type: xlrelease.StringVariable
+          key: apiCle.idDemande.bench
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - id demande ApiCle Bench
+        - type: xlrelease.StringVariable
+          key: vip.ressource.vacpp
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - ressource REST Vip VA-CPP
+        - type: xlrelease.StringVariable
+          key: apiCle.idDemande.vacpp
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - id demande ApiCle VA-CPP
+        - type: xlrelease.StringVariable
+          key: vip.ressource.appro
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - resource REST Vip Appro
+        - type: xlrelease.StringVariable
+          key: apiCle.idDemande.appro
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - id demande ApiCle Appro
+        - type: xlrelease.StringVariable
+          key: vip.ressource.pms
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - resource REST Vip PMS
+        - type: xlrelease.StringVariable
+          key: apiCle.idDemande.pms
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - id demande ApiCle PMS
+        - type: xlrelease.StringVariable
+          key: vip.ressource.prod
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - resource REST Vip PROD
+        - type: xlrelease.StringVariable
+          key: apiCle.idDemande.prod
+          requiresValue: false
+          showOnReleaseStart: false
+          label: auto - id demande ApiCle PROD
+        - type: xlrelease.StringVariable
+          key: snow.number
+          requiresValue: false
+          showOnReleaseStart: false
+          label: Numéro de changement SNOW
+          description: Numéro du changement SNOW permettant d'automatiser le GO pour
+            l'approvisionnement de l'environnement de production
+        - type: xlrelease.StringVariable
+          key: snow.sys.id
+          requiresValue: false
+          showOnReleaseStart: false
+          label: Identifiant technique du changement SNOW
+          description: Identifiant technique du changement SNOW
+        scriptUsername: sd45w110
+        scriptUserPassword: provenw110*
+        riskProfile: Default risk profile

@@ -1,0 +1,42 @@
+apiVersion: xl/v2
+kind: Blueprint
+
+metadata:
+  name: Simple Blueprint
+  description: demo
+  author: Espa5820
+  version: 1.0
+  suppressXebiaLabsFolder: true
+spec:
+  parameters:
+  - name: direction
+    type: Select
+    prompt: "Nom Direction Pole-emploi"
+    options:
+    - "D2IA"
+    - "DER"
+    - "DFA"
+    - "DOPS"
+    - "DPIT"
+    - "DROSD"
+    - "PSO"
+
+  - name: blocPOS
+    type: Input
+    prompt: "bloc POS (4 lettres)"
+    
+  - name: nomProduit
+    type: Input
+    prompt: "nom produit (minuscule sans espace)"
+
+  - name: lettreCadre
+    type: Input
+    prompt: "lettreCadre"
+
+  - name: codeCadre
+    type: Input
+    prompt: "codeCadre"
+
+  files:
+  - path: demo.xlvals.tmpl
+  - path: demo.yaml.tmpl

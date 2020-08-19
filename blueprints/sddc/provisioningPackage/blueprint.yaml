@@ -1,0 +1,41 @@
+apiVersion: xl/v2
+kind: Blueprint
+
+metadata:
+  name: provisioningPackage
+  description: demo
+  author: Espa5820
+  version: 1.0
+  suppressXebiaLabsFolder: true
+spec:
+  parameters:
+      
+  - name: nomProduit
+    type: Input
+    prompt: "nom produit (minuscule sans espace)"
+
+  - name: codeComposant
+    type: Input
+    prompt: "codeComposant"
+
+  - name: middleWare
+    type: Select
+    prompt: "Type MiddleWare"
+    options:
+    - "Linux"
+    - "Apache"
+    - "Weblogic"
+    - "Oracle"
+    - "Tomcat" 
+
+  - name: versionTemplate
+    type: Input
+    prompt: "version Template"
+    default: "1.0"
+
+  - name: provisioningTemplate
+    value: !expr "'Applications/Communs/Provisioning/templates/'+middleWare"
+
+  files:
+  - path: provisioningPackage.xlvals.tmpl
+  - path: provisioningPackage.yaml.tmpl

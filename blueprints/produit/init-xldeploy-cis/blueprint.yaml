@@ -1,0 +1,108 @@
+apiVersion: xl/v2
+kind: Blueprint
+
+metadata:
+  name: Init XLDeploy Cis
+  description: initialise Environments
+  author: Espa5820
+  version: 1.0
+  suppressXebiaLabsFolder: true
+  instructions: |
+    Please read the generated file "xebialabs/USAGE-docker-compose.md" for further usage instructions.
+    This setup is not suitable for production use. It is intended for development and testing purposes only.
+spec:
+  parameters:
+
+  - name: direction
+    type: Select
+    prompt: "Nom Direction Pole-emploi"
+    options:
+    - "D2IA"
+    - "DER"
+    - "DFA"
+    - "DOPS"
+    - "DPIT"
+    - "DROSD"
+    - "PSO"
+
+  - name: blocPOS
+    type: Input
+    prompt: "bloc POS (4 lettres)"
+    
+  - name: nomProduit
+    type: Input
+    prompt: "nom produit (minuscule sans espace)"
+
+  - name: codeCadre
+    type: Select
+    prompt : "code Cadre"
+    options:
+    - "TIC"
+    - "TIS"
+    - "VA"
+    - "VACPP"
+    - "BENCH"
+    - "APPRO"
+    - "PMS"
+    - "PROD" 
+
+  - name: codeCadreSDDC
+    type: Input
+    prompt: "codeCadreSDDC"
+    value: !expr " (codeCadre=='PMS' ||codeCadre=='PROD' ) ? 'Production' : codeCadre"
+
+  - name: lettreCadre
+    type: Input
+    prompt: "lettreCadre"
+
+  - name: rootPath
+    type: Input
+    prompt: "chemin origine"
+    default: !expr " (codeCadre == 'TIC' || codeCadre =='TIS') ? '1-Dev' : ((codeCadre == 'VA' || codeCadre == 'VACPP' || codeCadre=='APPRO' ) ? '2-Validation' :((codeCadre=='BENCH')?'3-Bench':'4-Production'))"
+    options:
+     - 1-Dev
+     - 2-Validation
+     - 3-Bench
+     - 4-Production
+
+  - name: nomEnvironnement
+    type: Input
+    prompt: nomEnvironnement
+    default: !expr "nomProduit + '_Cadre'+lettreCadre+'_'+codeCadre"
+
+  - name: rootTargetDir
+    type: Select
+    prompt: "repertoire racines des infras provisionnées"
+    default: !expr "(codeCadre=='PROD' || codeCadre=='PMS' ? 'PROD' : 'Fabricants')"
+    options:
+    - Fabricants
+    - PROD
+
+  - name: targetDir
+    type: Input
+    prompt: repertoire cible des infras provisionnées"
+    default: !expr "rootTargetDir+'/'+blocPOS+'/'+codeCadre"
+
+  - name: cloudProvider
+    type: Select
+    prompt: "cloud Provider"
+    default: !expr "(rootTargetDir=='Fabricants' ? 'Infrastructure/Fabricants/COMMUN/SDDC/Cloud Provider FAB' : 'Infrastructure/Fabricants/COMMUN/SDDC/Cloud Provider PROD')"
+    options:
+    - Infrastructure/Fabricants/COMMUN/SDDC/Cloud Provider FAB
+    - Infrastructure/Fabricants/COMMUN/SDDC/Cloud Provider PROD
+
+  files:
+  # XebiaLabs
+  - path: xebialabs/config.yaml.tmpl
+    writeIf: !expr "GenerateDockerComposeSetup"
+  # XldEploy
+  #- path: xldeploy/environments.yaml
+  - path: xldeploy/.xlvals.tmpl
+  - path: xldeploy/environment.yaml.tmpl
+  - path: xldeploy/deployAll.yaml
+  - path: xldeploy/TIC/environment.yaml.tmpl
+  - path: xldeploy/TIC/.xlvals.tmpl
+  # XlRelease
+  - path: xlrelease/template-provisionnement.yaml
+  - path: xlrelease/template.xlvals.tmpl
+  - path: deployStack.yaml

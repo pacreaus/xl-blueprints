@@ -1,0 +1,21 @@
+---
+apiVersion: xl-deploy/v1
+kind: Environments
+spec:
+- directory: Environments/{{.rootPath}}
+- directory: Environments/{{.rootPath}}/{{substr 0 1 .nomProduit}}
+- directory: Environments/{{.rootPath}}/{{substr 0 1 .nomProduit}}/{{.nomProduit}}
+  children:
+  - name: {{.nomEnvironnement}}
+    type: udm.Environment
+    directoryPath: {{.targetDir}}
+    members:
+    - {{.cloudProvider}}
+    dictionaries:
+    - ./provisionning_dict
+  - name: provisionning_dict
+    type: udm.Dictionary
+    entries:
+      scaling: 1
+      lettreCadre: "{{ lower .lettreCadre}}"
+      codeCadre: "{{.codeCadreSDDC}}"

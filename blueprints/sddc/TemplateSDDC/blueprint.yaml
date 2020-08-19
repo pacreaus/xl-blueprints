@@ -1,0 +1,32 @@
+apiVersion: xl/v2
+kind: Blueprint
+
+metadata:
+  name: TemplateSDDC
+  description: bluePrint creation template SDDC
+  author: Espa5820
+  version: 1.0
+  suppressXebiaLabsFolder: true
+spec:
+  parameters:
+  - name: MiddleWare
+    type: Select
+    prompt: "Type MiddleWare"
+    options:
+    - "Linux-sddc"
+    - "Apache-sddc"
+    - "Weblogic-sddc"
+    - "Oracle"
+    - "Tomcat-sddc"
+
+  - name: Service SDDC
+    type: Input
+    prompt: "nom du service SDDC"
+    
+  - name: template SDDC
+    type: Input
+    prompt: "template de service SDDC"
+
+  files:
+  - path: sddcTemplate.xlvals.tmpl
+  - path: sddcTemplate.yaml.tmpl

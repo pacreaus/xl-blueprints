@@ -1,0 +1,19 @@
+---
+apiVersion: xl-deploy/v1
+kind: Environments
+spec:
+- directory: Environments/demo
+- directory: Environments/demo/{{.direction}}
+- directory: Environments/demo/{{.direction}}/{{.blocPOS}}
+- directory: Environments/demo/{{.direction}}/{{.blocPOS}}/{{.nomProduit}}
+  children:
+  - name: env_demo_{{.nomProduit}}
+    type: udm.Environment
+    dictionaries:
+    - ./provisionning_dict
+  - name: provisionning_dict
+    type: udm.Dictionary
+    entries:
+      scaling: 1
+      lettreCadre: !value lettreCadre
+      codeCadre: "{{.codeCadre}}"

@@ -1,0 +1,23 @@
+---
+apiVersion: xl-deploy/v1
+kind: Applications
+spec:
+- directory: Applications/{{substr 0 1 .nomProduit}}
+- directory: Applications/{{substr 0 1 .nomProduit}}/{{.nomProduit}}
+- directory: Applications/{{substr 0 1 .nomProduit}}/{{.nomProduit}}/provisioning
+  children:
+  - name: {{.middleWare}}-{{.codeComposant}}
+    type: udm.Application
+    children:
+    - name: '1.0'
+      type: udm.DeploymentPackage
+      deployables:
+      - name: instance-{{.middleWare}}-{{.codeComposant}}-{{"{{"}}codeCadre{{"}}"}}-{{"{{"}}lettreCadre{{"}}"}}
+        type: sddc.HttpdInstanceSpec
+        codeComposant: '{{.codeComposant}}'
+        codeTesi: '{{.codeComposant}}'
+        codeCadre: '{{"{{"}}codeCadre{{"}}"}}'
+        groupeCadre: '{{"{{"}}codeCadre{{"}}"}}'
+        lettreCadre: '{{"{{"}}lettreCadre{{"}}"}}'
+        scaling: '{{"{{"}}{{.codeComposant}}-scaling{{"}}"}}'
+        provisioningTemplate: {{.provisioningTemplate}}/{{.versionTemplate}}

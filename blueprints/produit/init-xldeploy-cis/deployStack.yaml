@@ -1,0 +1,7 @@
+---
+apiVersion: xl/v1
+kind: Import
+metadata:
+  imports:
+    - xldeploy/deployAll.yaml
+    - xlrelease/template-provisionnement.yaml
